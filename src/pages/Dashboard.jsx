@@ -9,7 +9,6 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts";
-import bgImage from "../finalbg.png";
 
 function Dashboard() {
   const { user, isLoaded } = useUser();
@@ -65,64 +64,57 @@ function Dashboard() {
   }));
 
   const getBarColor = (hours) => {
-    if (hours >= 5) return "rgba(255, 241, 200, 0.9)";
-    if (hours >= 3) return "rgba(255, 251, 158, 0.7)";
-    return "rgba(255, 241, 118, 0.5)";
+    if (hours >= 5) return "#011C40"; // darkest blue
+    if (hours >= 3) return "#023859"; // mid blue
+    return "#26658C"; // lighter Luna shade
   };
 
   return (
-    <div
-      className="min-h-screen p-4 relative text-black"
-      style={{
-        backgroundImage: `url(${bgImage})`,
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        backgroundRepeat: "no-repeat",
-      }}
-    >
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-md"></div>
-
+    <div className="min-h-screen p-6 relative text-[#011C40] bg-gradient-to-b from-[#A7EBF2] to-[#011C40]">
       <div className="relative z-10 max-w-4xl mx-auto">
-        <h2 className="text-2xl md:text-3xl font-bold mb-6 text-yellow-200 text-center">
+        <h2 className="text-2xl md:text-3xl font-bold mb-6 text-center text-[#011C40]">
           Dashboard
         </h2>
 
+        {/* Add Study Log Form */}
         <form
           onSubmit={addLog}
-          className="bg-white/20 backdrop-blur-md border border-yellow-400 p-4 rounded-xl mb-4 flex flex-col sm:flex-row gap-3"
+          className="bg-white/20 backdrop-blur-md border border-[#54ACBF] p-4 rounded-xl mb-4 flex flex-col sm:flex-row gap-3"
         >
           <input
             type="text"
             placeholder="Subject"
             value={subject}
             onChange={(e) => setSubject(e.target.value)}
-            className="flex-1 px-3 py-2 rounded bg-white/10 border border-yellow-400 text-black placeholder-black w-full"
+            className="flex-1 px-3 py-2 rounded bg-white/30 border border-[#54ACBF] text-[#011C40] placeholder-[#023859] w-full"
           />
           <input
             type="number"
             placeholder="Hours"
             value={timeSpent}
             onChange={(e) => setTimeSpent(e.target.value)}
-            className="flex-1 px-3 py-2 rounded bg-white/10 border border-yellow-400 text-black placeholder-black w-full"
+            min="0" 
+            className="flex-1 px-3 py-2 rounded bg-white/30 border border-[#54ACBF] text-[#011C40] placeholder-[#023859] w-full"
           />
+
           <button
             type="submit"
-            className="w-full sm:w-auto bg-yellow-400 text-black px-4 py-2 rounded-xl font-semibold transition-transform hover:scale-105"
+            className="w-full sm:w-auto bg-[#011C40] text-white px-4 py-2 rounded-xl font-semibold transition-transform hover:scale-105 hover:bg-[#023859]"
           >
             Add
           </button>
         </form>
 
-       
-        <div className="bg-white/20 backdrop-blur-md border border-yellow-400 p-4 rounded-xl mb-6 text-black max-h-64 overflow-y-auto">
-          <h3 className="text-lg font-semibold mb-3 text-white">
+        {/* Logs List */}
+        <div className="bg-white/20 backdrop-blur-md border border-[#54ACBF] p-4 rounded-xl mb-6 max-h-64 overflow-y-auto">
+          <h3 className="text-lg font-semibold mb-3 text-[#011C40]">
             Your Study Logs
           </h3>
           {logs.length > 0 ? (
             logs.map((log) => (
               <div
                 key={log._id}
-                className="p-2 border-b border-yellow-400/50 flex justify-between text-sm sm:text-base items-center text-white"
+                className="p-2 border-b border-[#54ACBF]/50 flex justify-between text-sm sm:text-base items-center text-[#011C40]"
               >
                 <span>{log.subject}</span>
                 <span>{log.timeSpent} hrs</span>
@@ -132,41 +124,44 @@ function Dashboard() {
               </div>
             ))
           ) : (
-            <p className="text-white text-center text-sm">
+            <p className="text-[#023859] text-center text-sm">
               No study logs added yet.
             </p>
           )}
         </div>
 
-       
-        <div className="bg-white/20 backdrop-blur-md border border-yellow-400 p-4 rounded-xl">
-          <h3 className="text-lg font-semibold mb-3 text-white text-center">
+        {/* Chart */}
+        <div className="bg-white/20 backdrop-blur-md border border-[#54ACBF] p-4 rounded-xl">
+          <h3 className="text-lg font-semibold mb-3 text-[#011C40] text-center">
             Study Hours Chart
           </h3>
           {chartData.length > 0 ? (
             <div className="w-full h-64 sm:h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartData}>
-                  <XAxis dataKey="subject" stroke="#FFD700" />
-                  <YAxis stroke="#FFD700" />
+                  <XAxis dataKey="subject" stroke="#011C40" />
+                  <YAxis stroke="#011C40" />
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: "#fff",
-                      borderColor: "#FFD700",
+                      backgroundColor: "#A7EBF2",
+                      borderColor: "#011C40",
                     }}
-                    itemStyle={{ color: "#000" }}
-                    labelStyle={{ color: "#000" }}
+                    itemStyle={{ color: "#011C40" }}
+                    labelStyle={{ color: "#011C40" }}
                   />
                   <Bar dataKey="hours">
                     {chartData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={getBarColor(entry.hours)} />
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={getBarColor(entry.hours)}
+                      />
                     ))}
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </div>
           ) : (
-            <p className="text-white text-center text-sm">
+            <p className="text-[#023859] text-center text-sm">
               No study logs to display.
             </p>
           )}

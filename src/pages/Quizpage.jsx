@@ -1,149 +1,184 @@
-import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useUser } from "@clerk/clerk-react";
 import { generateQuestions } from "../api/gemini";
-import bgImage from "../finalbg.png";
 
-const Quiz = () => {
+const Quizpage = () => {
   const { user, isLoaded } = useUser();
-  const navigate = useNavigate();
 
   const [questions, setQuestions] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [selectedAnswer, setSelectedAnswer] = useState("");
+  const [selected, setSelected] = useState(null);
   const [score, setScore] = useState(0);
+  const [showExplanation, setShowExplanation] = useState(false);
+  const [quizFinished, setQuizFinished] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [answers, setAnswers] = useState([]);
+  const [quizStarted, setQuizStarted] = useState(false);
 
-  if (!isLoaded) return <p>Loading user info...</p>;
-  if (!user) return <p>Please sign in to start quiz</p>;
+  const fetchQuestions = async () => {
+    if (!isLoaded || !user) return;
 
-  const startQuiz = async () => {
     setLoading(true);
     setError("");
 
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/studyLogs/${user.id}`);
+      // ✅ fetch study logs
+      const res = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/studyLogs/${user.id}`
+      );
       const studyLogs = await res.json();
       const latestLog = studyLogs[studyLogs.length - 1];
 
-      if (!latestLog) throw new Error("No study log found.");
+      if (!latestLog) throw new Error("No study logs found");
 
-      const generatedQuestions = await generateQuestions(
+      // ✅ generate quiz from Gemini
+      const generated = await generateQuestions(
         latestLog.subject,
         latestLog.topic || latestLog.subject,
         "mcq"
       );
 
-     
-      setQuestions(generatedQuestions.slice(0, 10));
-      setCurrentIndex(0);
-      setScore(0);
-      setAnswers([]);
+      setQuestions(generated.slice(0, 10));
+      setQuizStarted(true);
     } catch (err) {
       console.error(err);
-      setError("Failed to load questions. Make sure you have study logs.");
+      setError("⚠️ Failed to load questions. Please add a study log.");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleNext = () => {
-    let isCorrect = selectedAnswer === questions[currentIndex].answer;
-    if (isCorrect) setScore((prev) => prev + 1);
+  const currentQuestion = questions[currentIndex];
 
-    const updatedAnswers = [
-      ...answers,
-      {
-        question: questions[currentIndex].question,
-        selected: selectedAnswer,
-        correct: questions[currentIndex].answer,
-        isCorrect,
-      },
-    ];
-    setAnswers(updatedAnswers);
+  const handleAnswer = (option) => {
+    setSelected(option);
+    setShowExplanation(true);
 
-    setSelectedAnswer("");
-
-    if (currentIndex + 1 < questions.length) {
-      setCurrentIndex(currentIndex + 1);
-    } else {
-      navigate("/score", {
-        state: { score: score + (isCorrect ? 1 : 0), answers: updatedAnswers },
-      });
+    if (option === currentQuestion.answer) {
+      setScore(score + 1);
     }
   };
 
+  const handleNext = () => {
+    if (currentIndex + 1 < questions.length) {
+      setCurrentIndex(currentIndex + 1);
+      setSelected(null);
+      setShowExplanation(false);
+    } else {
+      setQuizFinished(true);
+    }
+  };
+
+  const handleRestart = () => {
+    setCurrentIndex(0);
+    setSelected(null);
+    setScore(0);
+    setShowExplanation(false);
+    setQuizFinished(false);
+    setQuizStarted(false); // 👈 back to start screen
+    setQuestions([]);
+  };
+
+  if (!isLoaded) return <p className="text-center text-white">Loading user...</p>;
+  if (!user) return <p className="text-center text-white">Please sign in first</p>;
+
   return (
-    <div
-      className="min-h-screen flex items-center justify-center p-4 relative text-yellow-400"
-      style={{
-        backgroundImage: `url(${bgImage})`,
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        backgroundRepeat: "no-repeat",
-      }}
-    >
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-md"></div>
-
-      <div className="relative z-10 w-full max-w-xl">
-        {!questions.length ? (
-          <div className="flex flex-col items-center gap-4 bg-black/30 backdrop-blur-md p-6 rounded-xl shadow-lg">
-            <h2 className="text-3xl font-bold text-yellow-400">Start Quiz</h2>
+    <div className="min-h-screen bg-[#011C40] flex items-center justify-center p-4">
+      <div className="bg-white bg-opacity-10 backdrop-blur-xl p-6 rounded-2xl shadow-xl w-full max-w-lg border border-[#54ACBF]/30">
+        {!quizStarted ? (
+          <div className="text-center">
+            <h2 className="text-3xl font-extrabold text-[#011C40] mb-4">Ready to Start?</h2>
             <button
-              onClick={startQuiz}
-              className="w-full bg-gradient-to-r from-yellow-400 to-yellow-600 text-black font-bold py-3 rounded-xl shadow-md hover:scale-105 transition-transform duration-200"
+              onClick={fetchQuestions}
+              disabled={loading}
+              className="px-6 py-3 bg-[#011C40] text-white font-bold rounded-xl shadow-md hover:bg-[#022859] transition disabled:opacity-50"
             >
-              Start 10 MCQ Quiz
+              {loading ? "✨ Luna is preparing..." : "Start Quiz"}
             </button>
-            {error && <p className="text-red-500 text-center mt-4">{error}</p>}
+            {error && <p className="text-red-500 mt-3">{error}</p>}
           </div>
-        ) : loading ? (
-          <p className="text-yellow-400 text-center mt-10">Luna is generatingquestions...</p>
         ) : (
-          <div className="bg-black/30 backdrop-blur-md p-6 rounded-xl shadow-lg flex flex-col gap-4">
-            <div className="w-full bg-yellow-900/20 h-2 rounded-full mb-4">
-              <div
-                className="bg-yellow-400 h-2 rounded-full transition-all duration-300"
-                style={{ width: `${((currentIndex + 1) / questions.length) * 100}%` }}
-              />
-            </div>
+          <AnimatePresence mode="wait">
+            {!quizFinished && currentQuestion ? (
+              <motion.div
+                key={currentIndex}
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -30 }}
+                transition={{ duration: 0.4 }}
+              >
+                <h3 className="text-2xl font-bold mb-2 text-[#011C40]">
+                  Question {currentIndex + 1} of {questions.length}
+                </h3>
 
-            <h3 className="text-2xl font-bold mb-2">
-              Question {currentIndex + 1} of {questions.length}
-            </h3>
-            <p className="mb-4 text-lg">{questions[currentIndex].question}</p>
+                <p className="mb-4 text-[#011C40] font-medium">{currentQuestion.question}</p>
 
-            <div className="flex flex-col gap-3 mb-4">
-              {questions[currentIndex].options.map((option, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => setSelectedAnswer(option)}
-                  className={`border p-3 rounded-lg text-left transition-all
-                    ${
-                      selectedAnswer === option
-                        ? "bg-yellow-400 text-black font-semibold shadow-lg"
-                        : "bg-black/40 hover:bg-yellow-900/40"
-                    }`}
+                <div className="space-y-3">
+                  {currentQuestion.options.map((option, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => handleAnswer(option)}
+                      disabled={selected !== null}
+                      className={`w-full py-2 px-4 rounded-lg text-white font-medium transition 
+                        ${
+                          selected === option
+                            ? option === currentQuestion.answer
+                              ? "bg-green-600"
+                              : "bg-red-600"
+                            : "bg-[#011C40] hover:bg-[#022859]"
+                        }`}
+                    >
+                      {option}
+                    </button>
+                  ))}
+                </div>
+
+                {showExplanation && currentQuestion.explanation && (
+                  <p className="mt-4 p-3 rounded-lg bg-[#54ACBF]/20 text-[#011C40]">
+                    {currentQuestion.explanation}
+                  </p>
+                )}
+
+                <div className="mt-6 flex justify-end">
+                  {showExplanation && (
+                    <button
+                      onClick={handleNext}
+                      className="px-5 py-2 bg-[#011C40] text-white rounded-lg hover:bg-[#022859] transition"
+                    >
+                      Next
+                    </button>
+                  )}
+                </div>
+              </motion.div>
+            ) : (
+              quizFinished && (
+                <motion.div
+                  key="result"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  transition={{ duration: 0.4 }}
+                  className="text-center"
                 >
-                  {option}
-                </button>
-              ))}
-            </div>
-
-            <button
-              onClick={handleNext}
-              disabled={!selectedAnswer}
-              className="bg-gradient-to-r from-yellow-400 to-yellow-600 text-black px-4 py-3 rounded-xl font-bold w-full disabled:opacity-50 disabled:cursor-not-allowed transition-transform duration-200 hover:scale-105"
-            >
-              {currentIndex + 1 === questions.length ? "Finish Quiz" : "Next Question"}
-            </button>
-          </div>
+                  <h2 className="text-3xl font-bold text-[#011C40] mb-4">Quiz Finished!</h2>
+                  <p className="text-lg text-[#011C40] font-medium">
+                    Your Score: {score} / {questions.length}
+                  </p>
+                  <button
+                    onClick={handleRestart}
+                    className="mt-6 px-5 py-2 bg-[#011C40] text-white rounded-lg hover:bg-[#022859] transition"
+                  >
+                    Restart Quiz
+                  </button>
+                </motion.div>
+              )
+            )}
+          </AnimatePresence>
         )}
       </div>
     </div>
   );
 };
 
-export default Quiz;
+export default Quizpage;
