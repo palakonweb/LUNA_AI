@@ -36,43 +36,26 @@ const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
   }
 }
 
-
-export async function generateQuestions(subject, topic, mode = "mcq") {
+export async function generateQuestions(subject, topic ) {
   const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
- 
-  const prompt =
-    mode === "mcq"
-      ? `Generate 5 multiple choice quiz questions for the subject "${subject}" and topic "${topic}".
-Format the response as a JSON array with each object having:
-{
-  "question": "string",
-  "options": ["A", "B", "C", "D"],
-  "answer": "correct option from options"
-}`
-      : `Generate 5 short answer theory quiz questions for the subject "${subject}" and topic "${topic}".
-Format the response as a JSON array with each object having:
-{
-  "question": "string",
-  "answer": "ideal short answer in 2-3 sentences"
-}`;
+  const prompt = `
+Generate exactly 10 multiple-choice quiz questions with 4 options each for the subject "${subject}" and topic "${topic}".
+Return the response strictly as a JSON array with fields:
+- question (string)
+- options (array of 4 strings)
+- answer (string, must match exactly one option).
+`;
 
   try {
     const result = await model.generateContent(prompt);
     const text = await result.response.text();
 
-    let questions;
-    try {
-      questions = JSON.parse(text);
-    } catch (err) {
-      // If AI wrapped JSON in ```json code blocks
-      const cleaned = text.replace(/```json|```/g, "").trim();
-      questions = JSON.parse(cleaned);
-    }
+    let questions = JSON.parse(text);
 
-    return questions;
-  } catch (error) {
-    console.error("Error generating questions:", error);
+    return Array.isArray(questions) ? questions.slice(0, 10) : [];
+  } catch (err) {
+    console.error("Error generating questions:", err);
     return [];
   }
 }
