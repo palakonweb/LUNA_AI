@@ -37,7 +37,34 @@ app.get("/api/studyLogs/:userId", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch logs" });
   }
 });
-  console.log("this is luna backend")
+
+app.get("/api/score/:userId", async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+   
+    const logs = await StudyLog.find({ userId });
+
+    if (!logs.length) {
+      return res.status(404).json({ error: "No logs found for this user" });
+    }
+
+    
+    const totalScore = logs.reduce((acc, log) => acc + log.timeSpent, 0);
+
+    res.json({
+      score: totalScore,
+      totalLogs: logs.length,
+      logs,
+    });
+  } catch (err) {
+    console.error("❌ Error fetching score:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+ 
+
 
 app.listen(process.env.PORT || 5000, () =>
   console.log(`✅ Server running on http://localhost:${process.env.PORT}`)

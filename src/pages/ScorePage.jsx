@@ -5,9 +5,11 @@ import bgImage from "../finalbg.png";
 const ScorePage = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { score, answers } = location.state || {};
+  const { score: initialScore, answers, userId } = location.state || {}; // pass userId via state
 
+  const [score, setScore] = useState(initialScore || 0);
   const [suggestions, setSuggestions] = useState([]);
+  const API_URL = import.meta.env.VITE_API_URL;
 
   useEffect(() => {
     if (!answers) {
@@ -15,15 +17,29 @@ const ScorePage = () => {
       return;
     }
 
+    // Fetch score from backend
+    async function fetchScore() {
+      if (!userId) return;
+      try {
+        const res = await fetch(`${API_URL}/score/${userId}`);
+        const data = await res.json();
+        if (data.score !== undefined) setScore(data.score);
+      } catch (err) {
+        console.error("Error fetching score:", err);
+      }
+    }
 
+    fetchScore();
+
+    // Prepare suggestions for wrong answers
     const wrongAnswers = answers.filter((a) => !a.isCorrect);
     const newSuggestions = wrongAnswers.map((ans) => ({
       question: ans.question,
       suggestion: ans.correct,
     }));
-
     setSuggestions(newSuggestions);
-  }, [answers, navigate]);
+
+  }, [answers, navigate, API_URL, userId]);
 
   if (!answers) return null;
 
@@ -40,7 +56,6 @@ const ScorePage = () => {
         backgroundRepeat: "no-repeat",
       }}
     >
-     
       <div className="absolute inset-0 bg-black/60 backdrop-blur-md"></div>
 
       <div className="relative z-10 w-full max-w-2xl flex flex-col gap-4">
@@ -50,13 +65,13 @@ const ScorePage = () => {
               ? `🎉 Congratulations! You scored ${score} / ${total}`
               : `Quiz Results`}
           </h2>
+
           {percent < 80 && (
             <p className="text-center text-lg">
               Your Score: <span className="font-bold">{score}</span> / {total}
             </p>
           )}
 
-         
           <div className="space-y-3">
             {answers.map((ans, idx) => (
               <div
@@ -86,7 +101,6 @@ const ScorePage = () => {
             ))}
           </div>
 
-          
           {suggestions.length > 0 && (
             <div className="mt-4 p-4 bg-yellow-900/20 rounded-lg">
               <h3 className="font-bold mb-2">Luna suggests:</h3>
