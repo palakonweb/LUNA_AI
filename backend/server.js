@@ -37,6 +37,7 @@ app.get("/api/studyLogs/:userId", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch logs" });
   }
 });
+  console.log("this is luna backend")
 
 app.listen(process.env.PORT || 5000, () =>
   console.log(`✅ Server running on http://localhost:${process.env.PORT}`)
