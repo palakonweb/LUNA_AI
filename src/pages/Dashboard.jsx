@@ -17,13 +17,16 @@ function Dashboard() {
   const [subject, setSubject] = useState("");
   const [timeSpent, setTimeSpent] = useState("");
 
+  const API_URL = import.meta.env.VITE_API_URL;
+
   // Fetch logs
   useEffect(() => {
     if (!isLoaded || !user) return;
-    fetch(`http://localhost:5000/api/studyLogs/${user.id}`)
+    fetch(`${API_URL}/api/studyLogs/${user.id}`)
       .then((res) => res.json())
-      .then(setLogs);
-  }, [isLoaded, user]);
+      .then(setLogs)
+      .catch((err) => console.error("Error fetching logs:", err));
+  }, [isLoaded, user, API_URL]);
 
   const addLog = async (e) => {
     e.preventDefault();
@@ -31,22 +34,26 @@ function Dashboard() {
 
     const today = new Date().toISOString();
 
-    await fetch("http://localhost:5000/api/studyLogs", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        userId: user.id,
-        subject,
-        timeSpent,
-        date: today,
-      }),
-    });
+    try {
+      await fetch(`${API_URL}/api/studyLogs`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: user.id,
+          subject,
+          timeSpent,
+          date: today,
+        }),
+      });
 
-    const res = await fetch(`http://localhost:5000/api/studyLogs/${user.id}`);
-    setLogs(await res.json());
+      const res = await fetch(`${API_URL}/api/studyLogs/${user.id}`);
+      setLogs(await res.json());
 
-    setSubject("");
-    setTimeSpent("");
+      setSubject("");
+      setTimeSpent("");
+    } catch (err) {
+      console.error("Error adding log:", err);
+    }
   };
 
   if (!isLoaded) return <p>Loading...</p>;
@@ -76,12 +83,10 @@ function Dashboard() {
       <div className="absolute inset-0 bg-black/40 backdrop-blur-md"></div>
 
       <div className="relative z-10 max-w-4xl mx-auto">
-        {/* Heading */}
         <h2 className="text-2xl md:text-3xl font-bold mb-6 text-yellow-200 text-center">
           Dashboard
         </h2>
 
-        {/* Form */}
         <form
           onSubmit={addLog}
           className="bg-white/20 backdrop-blur-md border border-yellow-400 p-4 rounded-xl mb-4 flex flex-col sm:flex-row gap-3"
@@ -108,7 +113,7 @@ function Dashboard() {
           </button>
         </form>
 
-        {/* Logs */}
+       
         <div className="bg-white/20 backdrop-blur-md border border-yellow-400 p-4 rounded-xl mb-6 text-black max-h-64 overflow-y-auto">
           <h3 className="text-lg font-semibold mb-3 text-white">
             Your Study Logs
@@ -133,7 +138,7 @@ function Dashboard() {
           )}
         </div>
 
-        {/* Chart */}
+       
         <div className="bg-white/20 backdrop-blur-md border border-yellow-400 p-4 rounded-xl">
           <h3 className="text-lg font-semibold mb-3 text-white text-center">
             Study Hours Chart
